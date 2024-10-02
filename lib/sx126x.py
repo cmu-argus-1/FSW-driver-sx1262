@@ -282,11 +282,15 @@ class SX126X:
 
         state = self.standby()
 
+        # Switch to receive mode instanly after transmitting
+        state = self.startReceive(SX126X_RX_TIMEOUT_INF)
+        ASSERT(state)
+
         return state
 
     def receive(self, data, len_, timeout_en, timeout_ms):
-        state = self.standby()
-        ASSERT(state)
+        # state = self.standby()
+        # ASSERT(state)
 
         timeout = 0
 
@@ -313,24 +317,15 @@ class SX126X:
         else:
             timeoutValue = SX126X_RX_TIMEOUT_NONE
 
-        state = self.startReceive(timeoutValue)
-        ASSERT(state)
+        if self.irq.value:
+            if self._headerType == SX126X_LORA_HEADER_IMPLICIT and self.getPacketType() == SX126X_PACKET_TYPE_LORA:
+                state = self.fixImplicitTimeout()
+                ASSERT(state)
 
-        start = ticks_us()
-        while not self.irq.value:
-            yield_()
-            if timeout_en:
-                if abs(ticks_diff(start, ticks_us())) > timeout:
-                    self.fixImplicitTimeout()
-                    self.clearIrqStatus()
-                    self.standby()
-                    return ERR_RX_TIMEOUT
+            return self.readData(data, len_)
 
-        if self._headerType == SX126X_LORA_HEADER_IMPLICIT and self.getPacketType() == SX126X_PACKET_TYPE_LORA:
-            state = self.fixImplicitTimeout()
-            ASSERT(state)
-
-        return self.readData(data, len_)
+        else:
+            return ERR_RX_TIMEOUT
 
     def transmitDirect(self, frf=0):
         state = ERR_NONE
@@ -459,7 +454,7 @@ class SX126X:
               yield_()
 
         return state
-		
+
     def startReceive(self, timeout=SX126X_RX_TIMEOUT_INF):
         state = ERR_NONE
         modem = self.getPacketType()
@@ -542,8 +537,9 @@ class SX126X:
         return state
 
     def readData(self, data, len_):
-        state = self.standby()
-        ASSERT(state)
+        # Sus
+        # state = self.standby()
+        # ASSERT(state)
 
         irq = self.getIrqStatus()
         crcState = ERR_NONE
