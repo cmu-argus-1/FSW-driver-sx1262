@@ -173,6 +173,12 @@ class SX1262(SX126X):
             self._callbackFunction = self._dummyFunction
             super().clearDio1Action()
             return state
+<<<<<<< HEAD
+=======
+        
+    def rx_available(self):
+        return super().RX_available()
+>>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
 
     def recv(self, len=0, timeout_en=False, timeout_ms=0):
         if not self.blocking:

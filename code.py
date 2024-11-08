@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from sx1262 import SX1262
+=======
+from sx1262 import SX1262 # type: ignore
+>>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
 from microcontroller import pin
 import time
 import digitalio
@@ -24,6 +28,7 @@ while True:
 
     sx.send(tx_msg)
     print("Transmittted")
+<<<<<<< HEAD
 
     msg, err = sx.recv(len=0, timeout_en=True, timeout_ms=1000)
 
@@ -31,5 +36,18 @@ while True:
         error = SX1262.STATUS[err]
         msg = msg[4:]
         print(msg)
+=======
+    time.sleep(5)
+
+    if sx.rx_available():
+        print("Message in RX buffer")
+        msg, err = sx.recv(len=0, timeout_en=True, timeout_ms=1000)
+        if (len(msg) > 0):
+            error = SX1262.STATUS[err]
+            msg = msg[4:]
+            print(msg)
+    else:
+        print("Nothing in buffer")
+>>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
 
     time.sleep(5)

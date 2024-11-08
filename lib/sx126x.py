@@ -287,6 +287,13 @@ class SX126X:
         ASSERT(state)
 
         return state
+<<<<<<< HEAD
+=======
+    
+    def RX_available(self):
+        # check if there is data in the FIFO buffer
+        return self.irq.value
+>>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
 
     def receive(self, data, len_, timeout_en, timeout_ms):
         # state = self.standby()
@@ -317,7 +324,11 @@ class SX126X:
         else:
             timeoutValue = SX126X_RX_TIMEOUT_NONE
 
+<<<<<<< HEAD
         if self.irq.value:
+=======
+        if self.RX_available():
+>>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
             if self._headerType == SX126X_LORA_HEADER_IMPLICIT and self.getPacketType() == SX126X_PACKET_TYPE_LORA:
                 state = self.fixImplicitTimeout()
                 ASSERT(state)
