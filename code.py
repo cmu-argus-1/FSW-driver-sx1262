@@ -1,4 +1,4 @@
-from hal.drivers.sx1262 import SX1262
+from hal.drivers.sx126x import SX1262
 from microcontroller import pin
 import time
 import digitalio
