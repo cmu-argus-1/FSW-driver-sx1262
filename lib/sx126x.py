@@ -1,68 +1,51 @@
-from _sx126x import *
+from hal.drivers._sx126x import *
 
-from sys import implementation
+import digitalio
+import busio
+from time import sleep, monotonic_ns
 
-if implementation.name == 'micropython':
-    from machine import SPI, Pin
-    from utime import sleep_ms, sleep_us, ticks_ms, ticks_us, ticks_diff
+_MS_PER_NS = const(1000000)
+_US_PER_NS = const(1000)
+_MS_PER_S = const(1000)
+_TICKS_MAX = const(536870911)
+_TICKS_PERIOD = const(536870912)
+_TICKS_HALFPERIOD = const(268435456)
 
-if implementation.name == 'circuitpython':
-    import digitalio
-    import busio
-    from time import sleep, monotonic_ns
+def sleep_ms(ms):
+    sleep(ms/1000)
 
-    _MS_PER_NS = const(1000000)
-    _US_PER_NS = const(1000)
-    _MS_PER_S = const(1000)
-    _TICKS_MAX = const(536870911)
-    _TICKS_PERIOD = const(536870912)
-    _TICKS_HALFPERIOD = const(268435456)
+def sleep_us(us):
+    sleep(us/1000000)
 
-    def sleep_ms(ms):
-        sleep(ms/1000)
+def ticks_ms():
+    return (monotonic_ns() // _MS_PER_NS) & _TICKS_MAX
 
-    def sleep_us(us):
-        sleep(us/1000000)
+def ticks_us():
+    return (monotonic_ns() // _US_PER_NS) & _TICKS_MAX
 
-    def ticks_ms():
-        return (monotonic_ns() // _MS_PER_NS) & _TICKS_MAX
-
-    def ticks_us():
-       return (monotonic_ns() // _US_PER_NS) & _TICKS_MAX
-
-    def ticks_diff(end, start):
-        diff = (end - start) & _TICKS_MAX
-        diff = ((diff + _TICKS_HALFPERIOD) & _TICKS_MAX) - _TICKS_HALFPERIOD
-        return diff
+def ticks_diff(end, start):
+    diff = (end - start) & _TICKS_MAX
+    diff = ((diff + _TICKS_HALFPERIOD) & _TICKS_MAX) - _TICKS_HALFPERIOD
+    return diff
 
 class SX126X:
 
     def __init__(self, spi_bus, clk, mosi, miso, cs, irq, rst, gpio):
         self._irq = irq
-        if implementation.name == 'micropython':
-          try:
-              self.spi = SPI(spi_bus, mode=SPI.MASTER, baudrate=2000000, pins=(clk, mosi, miso))        # Pycom variant uPy
-          except:
-              self.spi = SPI(spi_bus, baudrate=2000000, sck=Pin(clk), mosi=Pin(mosi), miso=Pin(miso))   # Generic variant uPy
-          self.cs = Pin(cs, mode=Pin.OUT)
-          self.irq = Pin(irq, mode=Pin.IN)
-          self.rst = Pin(rst, mode=Pin.OUT)
-          self.gpio = Pin(gpio, mode=Pin.IN)
 
-        if implementation.name == 'circuitpython':
-          self.spi = busio.SPI(clk, MOSI=mosi, MISO=miso)
-          while not self.spi.try_lock():
-              pass
-          self.spi.configure(baudrate=2000000, phase=0, polarity=0, bits=8)
-          self.spi.unlock()
-          self.cs = digitalio.DigitalInOut(cs)
-          self.cs.switch_to_output(value=True)
-          self.irq = digitalio.DigitalInOut(irq)
-          self.irq.switch_to_input()
-          self.rst = digitalio.DigitalInOut(rst)
-          self.rst.switch_to_output(value=True)
-          self.gpio = digitalio.DigitalInOut(gpio)
-          self.gpio.switch_to_input()
+        self.spi = busio.SPI(clk, MOSI=mosi, MISO=miso)
+        while not self.spi.try_lock():
+            pass
+        self.spi.configure(baudrate=2000000, phase=0, polarity=0, bits=8)
+        self.spi.unlock()
+        self.cs = digitalio.DigitalInOut(cs)
+        self.cs.switch_to_output(value=True)
+        self.irq = digitalio.DigitalInOut(irq)
+        self.irq.switch_to_input()
+        self.rst = digitalio.DigitalInOut(rst)
+        self.rst.switch_to_output(value=True)
+        self.gpio = digitalio.DigitalInOut(gpio)
+        self.gpio.switch_to_input()
 
         self._bwKhz = 0
         self._sf = 0
@@ -215,21 +198,12 @@ class SX126X:
         return state
 
     def reset(self, verify=True):
-        if implementation.name == 'micropython':
-          self.rst.value(1)
-          sleep_us(150)
-          self.rst.value(0)
-          sleep_us(150)
-          self.rst.value(1)
-          sleep_us(150)
-
-        if implementation.name == 'circuitpython':
-          self.rst.value = True
-          sleep_us(150)
-          self.rst.value = False
-          sleep_us(150)
-          self.rst.value = True
-          sleep_us(150)
+        self.rst.value = True
+        sleep_us(150)
+        self.rst.value = False
+        sleep_us(150)
+        self.rst.value = True
+        sleep_us(150)
 
         if not verify:
             return ERR_NONE
@@ -287,13 +261,10 @@ class SX126X:
         ASSERT(state)
 
         return state
-<<<<<<< HEAD
-=======
     
     def RX_available(self):
         # check if there is data in the FIFO buffer
         return self.irq.value
->>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
 
     def receive(self, data, len_, timeout_en, timeout_ms):
         # state = self.standby()
@@ -324,11 +295,7 @@ class SX126X:
         else:
             timeoutValue = SX126X_RX_TIMEOUT_NONE
 
-<<<<<<< HEAD
-        if self.irq.value:
-=======
         if self.RX_available():
->>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
             if self._headerType == SX126X_LORA_HEADER_IMPLICIT and self.getPacketType() == SX126X_PACKET_TYPE_LORA:
                 state = self.fixImplicitTimeout()
                 ASSERT(state)
@@ -400,13 +367,9 @@ class SX126X:
             self.irq.irq(trigger=Pin.IRQ_RISING, handler=func)          # Generic variant uPy
 
     def clearDio1Action(self):
-        if implementation.name == 'micropython':
-          self.irq = Pin(self._irq, mode=Pin.IN)
-
-        if implementation.name == 'circuitpython':
-          self.irq.deinit()
-          self.irq = digitalio.DigitalInOut(self._irq)
-          self.irq.switch_to_input()
+        self.irq.deinit()
+        self.irq = digitalio.DigitalInOut(self._irq)
+        self.irq.switch_to_input()
 
     def startTransmit(self, data, len_, addr=0):
         if len_ > SX126X_MAX_PACKET_LENGTH:
@@ -456,13 +419,8 @@ class SX126X:
         state = self.setTx(SX126X_TX_TIMEOUT_NONE)
         ASSERT(state)
 
-        if implementation.name == 'micropython':
-          while self.gpio.value():
-              yield_()
-
-        if implementation.name == 'circuitpython':
-          while self.gpio.value:
-              yield_()
+        while self.gpio.value:
+            yield_()
 
         return state
 
@@ -507,7 +465,7 @@ class SX126X:
 
         data = [int((rxPeriodRaw >> 16) & 0xFF), int((rxPeriodRaw >> 8) & 0xFF), int(rxPeriodRaw & 0xFF),
                 int((sleepPeriodRaw >> 16) & 0xFF),int((sleepPeriodRaw >> 8) & 0xFF),int(sleepPeriodRaw & 0xFF)]
-        return self.SPIwriteCommand([SX126X_CMD_SET_RX_DUTY_CYCLE], 1, data, 6)
+        return self.SPIwriteCommand([], 1, data, 6)
 
     def startReceiveDutyCycleAuto(self, senderPreambleLength=0, minSymbols=8):
         if senderPreambleLength == 0:
@@ -1265,13 +1223,8 @@ class SX126X:
 
         sleep_ms(5)
 
-        if implementation.name == 'micropython':
-          while self.gpio.value():
-              yield_()
-
-        if implementation.name == 'circuitpython':
-          while self.gpio.value:
-              yield_()
+        while self.gpio.value:
+            yield_()
 
         return ERR_NONE
 
@@ -1282,49 +1235,28 @@ class SX126X:
         return self.SPItransfer(cmd, cmdLen, False, [], data, numBytes, waitForBusy)
 
     def SPItransfer(self, cmd, cmdLen, write, dataOut, dataIn, numBytes, waitForBusy, timeout=5000):
-        if implementation.name == 'micropython':
-          self.cs.value(0)
+        while not self.spi.try_lock():
+            pass
+        self.cs.value = False
 
-          start = ticks_ms()
-          while self.gpio.value():
-              yield_()
-              if abs(ticks_diff(start, ticks_ms())) >= timeout:
-                  self.cs.value(1)
-                  return ERR_SPI_CMD_TIMEOUT
+        start = ticks_ms()
+        while self.gpio.value:
+            yield_()
+            if abs(ticks_diff(start, ticks_ms())) >= timeout:
+                self.cs.value = True
+                self.spi.unlock()
+                return ERR_SPI_CMD_TIMEOUT
 
-          for i in range(cmdLen):
-              self.spi.write(bytes([cmd[i]]))
+        for i in range(cmdLen):
+            self.spi.write(bytes([cmd[i]]))
 
-        if implementation.name == 'circuitpython':
-          while not self.spi.try_lock():
-              pass
-          self.cs.value = False
-
-          start = ticks_ms()
-          while self.gpio.value:
-              yield_()
-              if abs(ticks_diff(start, ticks_ms())) >= timeout:
-                  self.cs.value = True
-                  self.spi.unlock()
-                  return ERR_SPI_CMD_TIMEOUT
-
-          for i in range(cmdLen):
-              self.spi.write(bytes([cmd[i]]))
-
-          in_ = bytearray(1)
+        in_ = bytearray(1)
 
         status = 0
 
         if write:
             for i in range(numBytes):
-                if implementation.name == 'micropython':
-                    try:
-                        in_ = self.spi.read(1, dataOut[i])
-                    except:
-                        in_ = self.spi.read(1, write=dataOut[i])
-
-                if implementation.name == 'circuitpython':
-                  self.spi.write_readinto(bytes([dataOut[i]]), in_)
+                self.spi.write_readinto(bytes([dataOut[i]]), in_)
 
                 if (in_[0] & 0b00001110) == SX126X_STATUS_CMD_TIMEOUT or\
                    (in_[0] & 0b00001110) == SX126X_STATUS_CMD_INVALID or\
@@ -1335,14 +1267,7 @@ class SX126X:
                     status = SX126X_STATUS_SPI_FAILED
                     break
         else:
-            if implementation.name == 'micropython':
-                try:
-                    in_ = self.spi.read(1, SX126X_CMD_NOP)
-                except:
-                    in_ = self.spi.read(1, write=SX126X_CMD_NOP)
-
-            if implementation.name == 'circuitpython':
-              self.spi.readinto(in_)
+            self.spi.readinto(in_)
 
             if (in_[0] & 0b00001110) == SX126X_STATUS_CMD_TIMEOUT or\
                (in_[0] & 0b00001110) == SX126X_STATUS_CMD_INVALID or\
@@ -1351,41 +1276,22 @@ class SX126X:
             elif (in_[0] == 0x00) or (in_[0] == 0xFF):
                 status = SX126X_STATUS_SPI_FAILED
             else:
-                if implementation.name == 'micropython':
-                    for i in range(numBytes):
-                        try:
-                            dataIn[i] = self.spi.read(1, SX126X_CMD_NOP)[0]
-                        except:
-                            dataIn[i] = self.spi.read(1, write=SX126X_CMD_NOP)[0]
+                for i in range(numBytes):
+                    self.spi.readinto(in_)
+                    dataIn[i] = in_[0]
 
-                if implementation.name == 'circuitpython':
-                  for i in range(numBytes):
-                      self.spi.readinto(in_)
-                      dataIn[i] = in_[0]
-
-        if implementation.name == 'micropython':
-          self.cs.value(1)
-
-        if implementation.name == 'circuitpython':
-          self.cs.value = True
-          self.spi.unlock()
+        self.cs.value = True
+        self.spi.unlock()
 
         if waitForBusy:
             sleep_us(1)
             start = ticks_ms()
-            if implementation.name == 'micropython':
-              while self.gpio.value():
-                  yield_()
-                  if abs(ticks_diff(start, ticks_ms())) >= timeout:
-                      status =  SX126X_STATUS_CMD_TIMEOUT
-                      break
-
-            if implementation.name == 'circuitpython':
-              while self.gpio.value:
-                  yield_()
-                  if abs(ticks_diff(start, ticks_ms())) >= timeout:
-                      status =  SX126X_STATUS_CMD_TIMEOUT
-                      break
+            
+            while self.gpio.value:
+                yield_()
+                if abs(ticks_diff(start, ticks_ms())) >= timeout:
+                    status =  SX126X_STATUS_CMD_TIMEOUT
+                    break
 
         switch = {SX126X_STATUS_CMD_TIMEOUT: ERR_SPI_CMD_TIMEOUT,
                   SX126X_STATUS_CMD_INVALID: ERR_SPI_CMD_INVALID,

@@ -1,5 +1,5 @@
-from _sx126x import *
-from sx126x import SX126X
+from hal.drivers._sx126x import *
+from hal.drivers.sx126x import SX126X
 
 _SX126X_PA_CONFIG_SX1262 = const(0x00)
 
@@ -173,12 +173,9 @@ class SX1262(SX126X):
             self._callbackFunction = self._dummyFunction
             super().clearDio1Action()
             return state
-<<<<<<< HEAD
-=======
         
     def rx_available(self):
         return super().RX_available()
->>>>>>> b18c1b4 (changes to match the rf95x driver for continuously checking the transmitted LoRa packets)
 
     def recv(self, len=0, timeout_en=False, timeout_ms=0):
         if not self.blocking:
